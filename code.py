@@ -1,64 +1,49 @@
 import RPi.GPIO as GPIO
 import time
 
-GPIO.setwarnings(False)
-GPIO.cleanup()
+GPIO.setmode(GPIO.BOARD)
+trigger =7
+echo =12
+led=8
 
-GPIO.setmode(GPIO.BCM)
-TRIG = 18
-ECHO = 12
-led = 16
-buzz = 23
-
-GPIO.setup(TRIG,GPIO.OUT)
-GPIO.setup(ECHO,GPIO.IN)
+GPIO.setup(trigger,GPIO.OUT)
 GPIO.setup(led,GPIO.OUT)
-GPIO.setup(buzz,GPIO.OUT)
+GPIO.setup(echo,GPIO.IN)
 
-GPIO.output(led,GPIO.LOW)
-GPIO.output(buzz, False)
-def get_distance():
+GPIO.output(trigger,0)
 
-  GPIO.output(TRIG, True)
-  time.sleep(0.00001)
-  GPIO.output(TRIG, False)
+time.sleep(0.1)
 
-  while GPIO.input(ECHO) == False:
-    st = time.time()
+pwm=GPIO.PWM(led,100)
 
-  while GPIO.input(ECHO) == True:
-    et = time.time()
+dc=0
+pwm.start(dc)
 
-  signal = et-st
-  distance = signal / 0.000058 #in centimeters
+print("distance: ")
 
-  return distance
-
-def buzzer_intensity(x):
-    GPIO.output(buzz, True)
-    time.sleep(x)
-    GPIO.output(buzz, False)
-    time.sleep(x)
-
-def led_intensity(y):
-    GPIO.output(led, GPIO.HIGH)
-    time.sleep(y)
-    GPIO.output(led, GPIO.LOW)
-    time.sleep(y)
-
+def distCalc():
+    GPIO.output(trigger,1)
+    time.sleep(0.00001)
+    GPIO.output(trigger,0)
+    while GPIO.input(echo)==0:
+        pass
+    start=time.time()
+    while GPIO.input(echo)==1:
+        pass
+    end=time.time()
+    
+    dist=(end-start)*20000
+    return dist
 while True:
-    distance = get_distance()
-    time.sleep(0.05)
-    print(distance)
+    dist=distCalc()
+    print(dist)
     
-    if ( distance < 15 and distance >= 11 ):
-        buzzer_intensity(0.3)
-        led_intensity(0.3)
     
-    if ( distance < 11 and distance >=7 ):
-        buzzer_intensity(0.1)
-        led_intensity(0.1)
-    
-    if ( distance < 7 ):
-        GPIO.output(buzz, True)
-        GPIO.output(led, GPIO.HIGH)
+    if dist>40:
+        GPIO.output(led,GPIO.HIGH)
+        pwm.ChangeDutyCycle(0)
+    else:
+        pwm.ChangeDutyCycle(100-(dist*2))
+        GPIO.output(led,GPIO.LOW)
+pwm.stop()
+GPIO.cleanup()
